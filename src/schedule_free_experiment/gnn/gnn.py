@@ -13,7 +13,8 @@ class GCN(torch.nn.Module):
         super().__init__()
         torch.manual_seed(1)
         self.conv1 = GCNConv(dataset.num_features, hidden_channels)
-        self.conv2 = GCNConv(hidden_channels, dataset.num_classes)
+        self.conv2 = GCNConv(hidden_channels, hidden_channels)
+        self.conv3 = GCNConv(hidden_channels, dataset.num_classes)
         self.dropout = dropout
 
     def forward(self, x, edge_index):
@@ -22,4 +23,7 @@ class GCN(torch.nn.Module):
         x = x.relu()
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.conv2(x, edge_index)
+        x = x.relu()
+        x = F.dropout(x, self.dropout, training=self.training)
+        x = self.conv3(x, edge_index)
         return x
