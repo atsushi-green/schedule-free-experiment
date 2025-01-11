@@ -91,9 +91,9 @@ def experiment(dataset: Dataset, init_lr: float, exp_name: str):
             writer.writerow(
                 [
                     epoch,
-                    f"{train_loss.item():.4f}",
-                    f"{val_loss.item():.4f}",
-                    f"{test_loss.item():.4f}",
+                    f"{train_loss:.4f}",
+                    f"{val_loss:.4f}",
+                    f"{test_loss:.4f}",
                     f"{train_acc:.4f}",
                     f"{val_acc:.4f}",
                     f"{test_acc:.4f}",
@@ -104,13 +104,27 @@ def experiment(dataset: Dataset, init_lr: float, exp_name: str):
 def train(model, data, optimizer, scheduler: LRScheduler, criterion):
     model.train()
     optimizer.zero_grad()
-    out = model(data.x, data.edge_index)
-    train_loss = criterion(out[data.train_mask], data.y[data.train_mask])
-    train_loss.backward()
-    optimizer.step()
-    scheduler.step()
+    # out = model(data.x, data.edge_index)
+    batch_size = 64
+    train_indices = data.train_mask.nonzero(as_tuple=True)[0]
+    # train_indicesをシャッフル
+    train_indices = train_indices[torch.randperm(train_indices.size(0))]
+    train_loss_value = 0
+    for i in range(0, len(train_indices), batch_size):
+        batch_indices = train_indices[i : i + batch_size]
+        out = model(data.x, data.edge_index)
+        train_loss = criterion(out[batch_indices], data.y[batch_indices])
+        train_loss.backward()
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
+        train_loss_value += train_loss.item()
+    # train_loss = criterion(out[data.train_mask], data.y[data.train_mask])
+    # train_loss.backward()
+    # optimizer.step()
+    # scheduler.step()
 
-    return train_loss
+    return train_loss_value
 
 
 def valid(model, data, criterion):
