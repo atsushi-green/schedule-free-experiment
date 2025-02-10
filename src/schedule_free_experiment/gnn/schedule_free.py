@@ -40,8 +40,7 @@ def experiment(dataset: Dataset, init_lr: float, exp_name: str):
     data = data.to(device)
     params = model.parameters()
     optimizer = RAdamScheduleFree(params, lr=init_lr, betas=(0.9, 0.999))
-
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
 
     best_val_acc = best_test_acc = 0
     loss_history = []

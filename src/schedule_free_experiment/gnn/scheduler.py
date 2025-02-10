@@ -39,13 +39,12 @@ def experiment(dataset: Dataset, init_lr: float, exp_name: str):
     data = data.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=init_lr)
     scheduler = CosineAnnealingLR(optimizer, T_max=200)
-
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
 
     best_val_acc = best_test_acc = 0
     loss_history = []
     print("Epoch, Train, Val, Test")
-    for epoch in range(1, 401):
+    for epoch in range(1, 101):
         train_loss = train(
             model=model,
             data=data,
@@ -55,6 +54,8 @@ def experiment(dataset: Dataset, init_lr: float, exp_name: str):
         )
         val_loss = valid(model=model, data=data, criterion=criterion)
         test_loss = test(model=model, data=data, criterion=criterion)
+        # モデル出力の分布を確認するためのdebug用
+        save_test_distribution(model=model, data=data, epoch=epoch, exp_name=exp_name)
         train_acc, val_acc, test_acc = calc_acc(model=model, data=data)
 
         # if val_acc > best_val_acc:
@@ -143,12 +144,39 @@ def test(model, data, criterion):
     return test_loss
 
 
+def save_test_distribution(model, data, epoch, exp_name):
+    model.eval()
+    with torch.no_grad():
+        out = model(data.x, data.edge_index)
+        out = out[data.test_mask]
+        out = torch.nn.functional.softmax(out, dim=1)
+        ans = data.y[data.test_mask]
+        from pathlib import Path
+
+        save_dir = Path(f"test_distribution/{exp_name}")
+        save_dir.mkdir(exist_ok=True, parents=True)
+        with open(
+            save_dir / f"test_distribution_{exp_name}_epoch_{epoch}.csv",
+            "w",
+            newline="",
+        ) as f:
+            writer = csv.writer(f)
+            writer.writerow(["Node Index", "Prediction", "Answer"])
+            for idx, (prediction, _ans) in enumerate(
+                zip(out.cpu().numpy(), ans.cpu().numpy())
+            ):
+                writer.writerow([idx, *prediction, _ans])
+
+
 def calc_acc(model, data):
     model.eval()
     out = model(data.x, data.edge_index)
     pred = out.argmax(dim=1)
     accs = []
     for _, mask in data("train_mask", "val_mask", "test_mask"):
+        bunbo = int(mask.sum())
+        bunshi = int((pred[mask] == data.y[mask]).sum())
+        print(f"{bunshi}/{bunbo}")
         accs.append(int((pred[mask] == data.y[mask]).sum()) / int(mask.sum()))
     return accs
 
