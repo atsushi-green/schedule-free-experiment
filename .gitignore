@@ -8,5 +8,10 @@ wheels/
 
 # venv
 .venv
+
+# 
+.DS_Store
 *.csv
 data
+*.png
+!assets/*
