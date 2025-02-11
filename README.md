@@ -15,6 +15,7 @@ Details are explained on [Zenn](https://zenn.dev/zenkigen_tech/articles/8356bed8
 ```bash
 # For Rye users:
 # run the experiment
+# NOTE: The `data` directory will be created, and the data will be downloaded there during the first run.
 rye run python src/schedule_free_experiment/gnn/scheduler.py
 rye run python src/schedule_free_experiment/gnn/schedule_free.py
 # visualize the results
